@@ -1,4 +1,4 @@
-# TỔNG QUAN VỀ CALLCENTER
+# Tổng quan về CallCenter
 
 ## 1. Giới thiệu
 
@@ -39,3 +39,49 @@ Sau khi `CallCenterEngine` xử lý xong, mỗi cuộc gọi tạo ra một bả
 | Khách tự cúp máy khi đang xếp hàng chờ | `ABANDONED` | `Abandoned` | `None` | `0.0` |
 
 Ngoài ra, các cuộc gọi có `tag = Success` sẽ tự động cộng dồn số cuộc gọi và tổng thời gian đàm thoại theo từng nhân viên và từng tháng (`YYYY-MM`) vào bảng `employee_monthly_stats`[cite: 1].
+
+## 4. Sơ đồ hoạt động của toàn bộ CallCenter Engine
+
+```text
+  [Nguồn cuộc gọi: RandomSource / ReplaySource]
+                       │
+                       ▼ (GeneratorWorker sinh các cuộc gọi ngẫu nhiên)
+         ┌───────────────────────────┐
+         │     CallCenterEngine      │
+         │  1. Kiểm tra trùng call_id│
+         └─────────────┬─────────────┘
+                       │
+         ┌─────────────▼─────────────┐      Đầy hàng đợi
+         │       CallingQueue        ├──────────────────────► Tag: Rejected
+         │   (Hàng đợi cuộc gọi    ) │      Khách cúp máy
+         └─────────────┬─────────────┘──────────────────────► Tag: Abandoned
+                       │
+                       ▼ (Ghép cặp 1-1: đầu CallingQueue + đầu ServiceQueue)
+         ┌───────────────────────────┐      Nhân viên rảnh
+         │       ServiceQueue        │◄─────────────────────┐
+         │    (Hàng đợi NV rảnh)     │                      │
+         └─────────────┬─────────────┘                      │
+                       │ (NV chuyển sang BUSY)              │
+                       ▼                                    │
+         ┌───────────────────────────┐                      │
+         │       CallProcessor       │                      │
+         │  (Min-Heap theo end_at)   │                      │
+         └─────────────┬─────────────┘                      │
+                       │ (tick() khi now >= end_at)         │
+                       ▼                                    │
+         ┌───────────────────────────┐      Chính sách      │
+         │   Hoàn tất & Giải phóng   ├──────────────────────┘
+         │      Tạo CallResult       │  (hoặc chuyển BREAK / OFFLINE)
+         │  (Success / Miss / Break) │
+         └─────────────┬─────────────┘
+                       │ (EventDispatcher phát CALL_FINISHED)
+          ┌────────────┴────────────┐
+          ▼                         ▼
+ [AppController -> GUI]    [PersistenceService]
+ (Cập nhật bảng & biểu đồ)  (Ghi batch vào PostgreSQL)
+                                    │
+                                    ▼ ( Tự động:19:00 & 00:00 hoặc Export thủ công)
+                           [ArchiveService / CSV]
+                           (Xuất calls-DD-MM-YYYY.csv)
+```
+
