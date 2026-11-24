@@ -48,12 +48,12 @@ Ngoài ra, các cuộc gọi có `tag = Success` sẽ tự động cộng dồn 
                        ▼ (GeneratorWorker sinh các cuộc gọi ngẫu nhiên)
          ┌───────────────────────────┐
          │     CallCenterEngine      │
-         │  1. Kiểm tra trùng call_id│
+         │  (Kiểm tra trùng call_id) │
          └─────────────┬─────────────┘
                        │
          ┌─────────────▼─────────────┐      Đầy hàng đợi
          │       CallingQueue        ├──────────────────────► Tag: Rejected
-         │   (Hàng đợi cuộc gọi    ) │      Khách cúp máy
+         │    (Hàng đợi cuộc gọi)    │      Khách cúp máy
          └─────────────┬─────────────┘──────────────────────► Tag: Abandoned
                        │
                        ▼ (Ghép cặp 1-1: đầu CallingQueue + đầu ServiceQueue)
